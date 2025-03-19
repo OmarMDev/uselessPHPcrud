@@ -11,8 +11,8 @@ for key in form.keys():
     print(f"{key}: {form.getvalue(key)}")
 print("</pre>")
 ---------------------------------------------------------------------------------
-
-
++++++++++++++++++++++ CREATE FORM  +++++++++++++++++++++++++++++++++++++++++++++
+---------------------------------------------------------------------------------
 <form method="post" action="/cgi-bin/crud.py">
     <input type="hidden" name="action" value="create">
     <input type="text" name="name" placeholder="Name" required>
@@ -21,7 +21,7 @@ print("</pre>")
     <button type="submit">Create</button>
 </form>
 
------------------------------------------------------------------------------------
+
 
 
 if form.getvalue('action') == 'create':
@@ -32,3 +32,42 @@ if form.getvalue('action') == 'create':
     cursor.execute("INSERT INTO users (name, email, phone) VALUES (%s, %s, %s)", (name, email, phone))
     conn.commit()
     print("User created successfully!")
+
+---------------------------------------------------------------------------------
++++++++++++++++++++++ EDIT FORM  +++++++++++++++++++++++++++++++++++++++++++++
+---------------------------------------------------------------------------------
+
+
+<form method="post" action="/cgi-bin/crud.py">
+    <input type="hidden" name="action" value="update">
+    <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
+    <input type="text" name="name" value="<?php echo $row['name']; ?>" required>
+    <input type="email" name="email" value="<?php echo $row['email']; ?>" required>
+    <input type="text" name="phone" value="<?php echo $row['phone']; ?>" required>
+    <button type="submit">Update</button>
+</form>
+
+if form.getvalue('action') == 'update':
+    id = form.getvalue('id')
+    name = form.getvalue('name')
+    email = form.getvalue('email')
+    phone = form.getvalue('phone')
+    print(f"Updating user: id={id}, name={name}, email={email}, phone={phone}")
+    cursor.execute("UPDATE users SET name=%s, email=%s, phone=%s WHERE id=%s", (name, email, phone, id))
+    conn.commit()
+    print("User updated successfully!")
+
+
+---------------------------------------------------------------------------------
++++++++++++++++++++++ DELETE  FORM  +++++++++++++++++++++++++++++++++++++++++++++
+---------------------------------------------------------------------------------
+
+<a href="/cgi-bin/crud.py?delete=<?php echo $row['id']; ?>" onclick="return confirm('Are you sure?')">Delete</a>
+
+
+if 'delete' in form:
+    id = form.getvalue('delete')
+    print(f"Deleting user: id={id}")
+    cursor.execute("DELETE FROM users WHERE id=%s", (id,))
+    conn.commit()
+    print("User deleted successfully!")
