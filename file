@@ -1,7 +1,7 @@
 <?php
 $servername = "localhost";
 $username = "root";
-$password = "your_mysql_root_password"; // Replace with your MySQL root password
+$password = ""; // Leave empty if no password is set
 $dbname = "crud_db";
 
 // Create connection
@@ -10,117 +10,7 @@ $conn = new mysqli($servername, $username, $password, $dbname);
 // Check connection
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
+} else {
+    echo "Connected successfully!";
 }
-
-// Create
-if (isset($_POST['create'])) {
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $phone = $_POST['phone'];
-
-    $sql = "INSERT INTO users (name, email, phone) VALUES ('$name', '$email', '$phone')";
-    if ($conn->query($sql) === TRUE) {
-        echo "New record created successfully";
-    } else {
-        echo "Error: " . $sql . "<br>" . $conn->error;
-    }
-}
-
-// Read
-$sql = "SELECT id, name, email, phone FROM users";
-$result = $conn->query($sql);
-
-// Update
-if (isset($_POST['update'])) {
-    $id = $_POST['id'];
-    $name = $_POST['name'];
-    $email = $_POST['email'];
-    $phone = $_POST['phone'];
-
-    $sql = "UPDATE users SET name='$name', email='$email', phone='$phone' WHERE id=$id";
-    if ($conn->query($sql) === TRUE) {
-        echo "Record updated successfully";
-    } else {
-        echo "Error updating record: " . $conn->error;
-    }
-}
-
-// Delete
-if (isset($_GET['delete'])) {
-    $id = $_GET['delete'];
-
-    $sql = "DELETE FROM users WHERE id=$id";
-    if ($conn->query($sql) === TRUE) {
-        echo "Record deleted successfully";
-    } else {
-        echo "Error deleting record: " . $conn->error;
-    }
-}
-?>
-
-<!DOCTYPE html>
-<html>
-<head>
-    <title>PHP CRUD</title>
-</head>
-<body>
-    <h2>Create User</h2>
-    <form method="post">
-        <input type="text" name="name" placeholder="Name" required>
-        <input type="email" name="email" placeholder="Email" required>
-        <input type="text" name="phone" placeholder="Phone" required>
-        <button type="submit" name="create">Create</button>
-    </form>
-
-    <h2>Users List</h2>
-    <table border="1">
-        <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Phone</th>
-            <th>Actions</th>
-        </tr>
-        <?php
-        if ($result->num_rows > 0) {
-            while($row = $result->fetch_assoc()) {
-                echo "<tr>
-                        <td>" . $row["id"]. "</td>
-                        <td>" . $row["name"]. "</td>
-                        <td>" . $row["email"]. "</td>
-                        <td>" . $row["phone"]. "</td>
-                        <td>
-                            <a href='crud.php?edit=" . $row["id"]. "'>Edit</a>
-                            <a href='crud.php?delete=" . $row["id"]. "'>Delete</a>
-                        </td>
-                      </tr>";
-            }
-        } else {
-            echo "<tr><td colspan='5'>No users found</td></tr>";
-        }
-        ?>
-    </table>
-
-    <?php
-    // Edit
-    if (isset($_GET['edit'])) {
-        $id = $_GET['edit'];
-        $sql = "SELECT * FROM users WHERE id=$id";
-        $result = $conn->query($sql);
-        $row = $result->fetch_assoc();
-    ?>
-    <h2>Edit User</h2>
-    <form method="post">
-        <input type="hidden" name="id" value="<?php echo $row['id']; ?>">
-        <input type="text" name="name" value="<?php echo $row['name']; ?>" required>
-        <input type="email" name="email" value="<?php echo $row['email']; ?>" required>
-        <input type="text" name="phone" value="<?php echo $row['phone']; ?>" required>
-        <button type="submit" name="update">Update</button>
-    </form>
-    <?php } ?>
-</body>
-</html>
-
-<?php
-$conn->close();
 ?>
