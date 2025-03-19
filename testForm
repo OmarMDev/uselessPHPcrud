@@ -1,0 +1,12 @@
+import cgi
+import cgitb
+
+cgitb.enable()  # Enable debugging
+
+form = cgi.FieldStorage()
+print("Content-Type: text/html\n")
+print("<pre>")
+print("Form data received:")
+for key in form.keys():
+    print(f"{key}: {form.getvalue(key)}")
+print("</pre>")
