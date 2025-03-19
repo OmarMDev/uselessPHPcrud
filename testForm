@@ -10,3 +10,25 @@ print("Form data received:")
 for key in form.keys():
     print(f"{key}: {form.getvalue(key)}")
 print("</pre>")
+---------------------------------------------------------------------------------
+
+
+<form method="post" action="/cgi-bin/crud.py">
+    <input type="hidden" name="action" value="create">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="text" name="phone" placeholder="Phone" required>
+    <button type="submit">Create</button>
+</form>
+
+-----------------------------------------------------------------------------------
+
+
+if form.getvalue('action') == 'create':
+    name = form.getvalue('name')
+    email = form.getvalue('email')
+    phone = form.getvalue('phone')
+    print(f"Creating user: name={name}, email={email}, phone={phone}")
+    cursor.execute("INSERT INTO users (name, email, phone) VALUES (%s, %s, %s)", (name, email, phone))
+    conn.commit()
+    print("User created successfully!")
