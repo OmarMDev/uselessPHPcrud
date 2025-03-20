@@ -1,0 +1,154 @@
+#!/bin/bash
+
+# Set the content type to HTML
+echo "Content-type: text/html"
+echo ""
+
+# Database connection details
+DB_HOST="127.0.0.1"
+DB_USER="root"
+DB_PASS="yes"
+DB_NAME="crud_db"
+
+# Function to execute a MySQL query and return the result
+execute_query() {
+    mysql -h "$DB_HOST" -u "$DB_USER" -p"$DB_PASS" -D "$DB_NAME" -e "$1"
+}
+
+# Function to escape special characters in form data
+escape_data() {
+    echo "$1" | sed "s/'/''/g"
+}
+
+# Read form data from stdin (for POST requests)
+if [ "$REQUEST_METHOD" = "POST" ]; then
+    read -n $CONTENT_LENGTH POST_DATA
+fi
+
+# Parse form data
+if [ -n "$POST_DATA" ]; then
+    action=$(echo "$POST_DATA" | grep -oP 'action=\K[^&]*')
+    name=$(echo "$POST_DATA" | grep -oP 'name=\K[^&]*')
+    email=$(echo "$POST_DATA" | grep -oP 'email=\K[^&]*')
+    phone=$(echo "$POST_DATA" | grep -oP 'phone=\K[^&]*')
+    id=$(echo "$POST_DATA" | grep -oP 'id=\K[^&]*')
+fi
+
+# Handle Create
+if [ "$action" = "create" ]; then
+    name=$(escape_data "$name")
+    email=$(escape_data "$email")
+    phone=$(escape_data "$phone")
+    execute_query "INSERT INTO users (name, email, phone) VALUES ('$name', '$email', '$phone');"
+    echo "<p class='success'>New record created successfully.</p>"
+fi
+
+# Handle Update
+if [ "$action" = "update" ]; then
+    name=$(escape_data "$name")
+    email=$(escape_data "$email")
+    phone=$(escape_data "$phone")
+    execute_query "UPDATE users SET name='$name', email='$email', phone='$phone' WHERE id=$id;"
+    echo "<p class='success'>Record updated successfully.</p>"
+fi
+
+# Handle Delete
+if [ -n "$QUERY_STRING" ] && echo "$QUERY_STRING" | grep -q "delete="; then
+    id=$(echo "$QUERY_STRING" | grep -oP 'delete=\K[^&]*')
+    execute_query "DELETE FROM users WHERE id=$id;"
+    echo "<p class='success'>Record deleted successfully.</p>"
+fi
+
+# Fetch all users
+users=$(execute_query "SELECT id, name, email, phone FROM users;")
+
+# Generate HTML
+echo "<!DOCTYPE html>"
+echo "<html lang='en'>"
+echo "<head>"
+echo "    <meta charset='UTF-8'>"
+echo "    <meta name='viewport' content='width=device-width, initial-scale=1.0'>"
+echo "    <title>Shell CGI CRUD Application</title>"
+echo "    <style>"
+echo "        body { font-family: 'Poppins', sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 0; }"
+echo "        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }"
+echo "        form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }"
+echo "        input[type='text'], input[type='email'] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }"
+echo "        button { background-color: #4a90e2; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }"
+echo "        button:hover { background-color: #357abd; }"
+echo "        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }"
+echo "        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }"
+echo "        th { background-color: #4a90e2; color: #fff; }"
+echo "        tr:hover { background-color: #f1f1f1; }"
+echo "        .actions a { color: #4a90e2; text-decoration: none; margin-right: 10px; }"
+echo "        .actions a:hover { text-decoration: underline; }"
+echo "        .success { color: #28a745; background: #d4edda; padding: 10px; border-radius: 4px; margin: 10px 0; }"
+echo "        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 4px; margin: 10px 0; }"
+echo "    </style>"
+echo "    <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap' rel='stylesheet'>"
+echo "</head>"
+echo "<body>"
+echo "    <div class='container'>"
+echo "        <h1>Shell CGI CRUD Application</h1>"
+
+# Display Create User Form
+echo "        <h2>Create User</h2>"
+echo "        <form method='post' action='/cgi-bin/crud.sh'>"
+echo "            <input type='hidden' name='action' value='create'>"
+echo "            <input type='text' name='name' placeholder='Name' required>"
+echo "            <input type='email' name='email' placeholder='Email' required>"
+echo "            <input type='text' name='phone' placeholder='Phone' required>"
+echo "            <button type='submit'>Create</button>"
+echo "        </form>"
+
+# Display Users Table
+echo "        <h2>Users List</h2>"
+echo "        <table>"
+echo "            <thead>"
+echo "                <tr>"
+echo "                    <th>ID</th>"
+echo "                    <th>Name</th>"
+echo "                    <th>Email</th>"
+echo "                    <th>Phone</th>"
+echo "                    <th>Actions</th>"
+echo "                </tr>"
+echo "            </thead>"
+echo "            <tbody>"
+
+# Loop through users and generate table rows
+echo "$users" | tail -n +2 | while read -r id name email phone; do
+    echo "                <tr>"
+    echo "                    <td>$id</td>"
+    echo "                    <td>$name</td>"
+    echo "                    <td>$email</td>"
+    echo "                    <td>$phone</td>"
+    echo "                    <td class='actions'>"
+    echo "                        <a href='/cgi-bin/crud.sh?edit=$id'>Edit</a>"
+    echo "                        <a href='/cgi-bin/crud.sh?delete=$id' onclick='return confirm(\"Are you sure?\")'>Delete</a>"
+    echo "                    </td>"
+    echo "                </tr>"
+done
+
+echo "            </tbody>"
+echo "        </table>"
+
+# Display Edit User Form
+if [ -n "$QUERY_STRING" ] && echo "$QUERY_STRING" | grep -q "edit="; then
+    id=$(echo "$QUERY_STRING" | grep -oP 'edit=\K[^&]*')
+    user=$(execute_query "SELECT * FROM users WHERE id=$id;")
+    user_data=$(echo "$user" | tail -n +2)
+    echo "        <h2>Edit User</h2>"
+    echo "        <form method='post' action='/cgi-bin/crud.sh'>"
+    echo "            <input type='hidden' name='action' value='update'>"
+    echo "            <input type='hidden' name='id' value='$id'>"
+    echo "            <input type='text' name='name' value='$(echo "$user_data" | awk '{print $2}')' required>"
+    echo "            <input type='email' name='email' value='$(echo "$user_data" | awk '{print $3}')' required>"
+    echo "            <input type='text' name='phone' value='$(echo "$user_data" | awk '{print $4}')' required>"
+    echo "            <button type='submit'>Update</button>"
+    echo "        </form>"
+fi
+
+# Close HTML
+echo "    </div>"
+echo "</body>"
+echo "</html>"
