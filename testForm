@@ -71,3 +71,174 @@ if 'delete' in form:
     cursor.execute("DELETE FROM users WHERE id=%s", (id,))
     conn.commit()
     print("User deleted successfully!")
+
+
+---------------------------------------------------------------------------------
++++++++++++++++++++++ FINAL FILE  +++++++++++++++++++++++++++++++++++++++++++++
+---------------------------------------------------------------------------------
+
+#!/usr/lib/cgi-bin/myenv/bin/python3
+
+import cgi
+import cgitb
+import mysql.connector
+
+# Enable debugging (useful for troubleshooting)
+cgitb.enable()
+
+# Database connection details
+db_config = {
+    'host': '127.0.0.1',
+    'user': 'root',
+    'password': 'yes',
+    'database': 'crud_db'
+}
+
+# Connect to the database
+conn = mysql.connector.connect(**db_config)
+cursor = conn.cursor()
+
+# Print HTTP headers
+print("Content-Type: text/html\n")
+
+# HTML template
+html = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python CGI CRUD Application</title>
+    <style>
+        body { font-family: 'Poppins', sans-serif; background-color: #f4f4f9; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        form { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); margin-bottom: 20px; }
+        input[type="text"], input[type="email"] { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; }
+        button { background-color: #4a90e2; color: #fff; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #357abd; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #4a90e2; color: #fff; }
+        tr:hover { background-color: #f1f1f1; }
+        .actions a { color: #4a90e2; text-decoration: none; margin-right: 10px; }
+        .actions a:hover { text-decoration: underline; }
+        .success { color: #28a745; background: #d4edda; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .error { color: #dc3545; background: #f8d7da; padding: 10px; border-radius: 4px; margin: 10px 0; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1>Python CGI CRUD Application</h1>
+"""
+
+# Handle form submissions
+form = cgi.FieldStorage()
+
+# Create
+if form.getvalue('action') == 'create':
+    name = form.getvalue('name')
+    email = form.getvalue('email')
+    phone = form.getvalue('phone')
+    cursor.execute("INSERT INTO users (name, email, phone) VALUES (%s, %s, %s)", (name, email, phone))
+    conn.commit()
+    html += "<p class='success'>New record created successfully.</p>"
+
+# Update
+if form.getvalue('action') == 'update':
+    id = form.getvalue('id')
+    name = form.getvalue('name')
+    email = form.getvalue('email')
+    phone = form.getvalue('phone')
+    print(f"Updating user: id={id}, name={name}, email={email}, phone={phone}")
+    cursor.execute("UPDATE users SET name=%s, email=%s, phone=%s WHERE id=%s", (name, email, phone, id))
+    conn.commit()
+    html += "<p class='success'>Record updated successfully.</p>"
+
+# Delete
+if 'delete' in form:
+    id = form.getvalue('delete')
+    cursor.execute("DELETE FROM users WHERE id=%s", (id,))
+    conn.commit()
+    html += "<p class='success'>Record deleted successfully.</p>"
+
+# Display Create User Form
+html += """
+    <h2>Create User</h2>
+    <form method="post" action="/cgi-bin/crud.py">
+        <input type="hidden" name="action" value="create">
+        <input type="text" name="name" placeholder="Name" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="text" name="phone" placeholder="Phone" required>
+    <button type="submit">Create</button>
+</form>
+"""
+
+# Fetch and display users
+cursor.execute("SELECT id, name, email, phone FROM users")
+users = cursor.fetchall()
+
+html += """
+    <h2>Users List</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+"""
+
+for user in users:
+    html += f"""
+            <tr>
+                <td>{user[0]}</td>
+                <td>{user[1]}</td>
+                <td>{user[2]}</td>
+                <td>{user[3]}</td>
+                <td class='actions'>
+                    <a href='/cgi-bin/crud.py?edit={user[0]}'>Edit</a>
+                    <a href='/cgi-bin/crud.py?delete={user[0]}' onclick='return confirm(\"Are you sure?\")'>Delete</a>
+                </td>
+            </tr>
+    """
+
+html += """
+        </tbody>
+    </table>
+"""
+
+# Edit User Form
+if 'edit' in form:
+    id = form.getvalue('edit')
+    cursor.execute("SELECT * FROM users WHERE id=%s", (id,))
+    user = cursor.fetchone()
+    html += f"""
+        <h2>Edit User</h2>
+        <form method="post" action="/cgi-bin/crud.py">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="id" value="{user[0]}">
+            <input type="text" name="name" value="{user[1]}" required>
+            <input type="email" name="email" value="{user[2]}" required>
+            <input type="text" name="phone" value="{user[3]}" required>
+            <button type="submit" name="update">Update</button>
+        </form>
+    """
+
+# Close HTML
+html += """
+    </div>
+</body>
+</html>
+"""
+
+# Print the HTML
+print(html)
+
+# Close database connection
+cursor.close()
+conn.close()
