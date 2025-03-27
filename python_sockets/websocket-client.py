@@ -3,7 +3,8 @@ import websockets
 import ssl
 
 async def client():
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    # Disable SSL verification for self-signed cert
+    ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
 
@@ -16,13 +17,12 @@ async def client():
             while True:
                 message = input("Client message > ")
                 if message.lower() == 'exit':
-                    await websocket.close()
                     break
                 await websocket.send(message)
                 response = await websocket.recv()
                 print(f"Server replied: {response}")
     except Exception as e:
-        print(f"Connection error: {e}")
+        print(f"Connection failed: {e}")
 
 if __name__ == "__main__":
     asyncio.run(client())
