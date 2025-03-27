@@ -2,18 +2,27 @@ import asyncio
 import websockets
 import ssl
 
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE
-
 async def client():
-    async with websockets.connect('wss://localhost:8765', ssl=ssl_context) as ws:
-        print("Connected! Type messages, or 'exit' to quit.")
-        while True:
-            msg = input("> ")
-            if msg == 'exit':
-                break
-            await ws.send(msg)
-            print(await ws.recv())
+    # Disable SSL verification for self-signed cert
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
 
-asyncio.get_event_loop().run_until_complete(client())
+    try:
+        async with websockets.connect(
+            "wss://localhost:8765",
+            ssl=ssl_context
+        ) as websocket:
+            print("Connected to server! Type 'exit' to quit.")
+            while True:
+                message = input("Client message > ")
+                if message.lower() == 'exit':
+                    break
+                await websocket.send(message)
+                response = await websocket.recv()
+                print(f"Server replied: {response}")
+    except Exception as e:
+        print(f"Connection failed: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(client())
