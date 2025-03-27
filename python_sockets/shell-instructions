@@ -1,0 +1,58 @@
+### shell ###
+
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=localhost"
+
+###SERVER###########################
+####################################
+
+cat > websocket_server.py << 'EOF'
+import asyncio
+import websockets
+import ssl
+
+async def echo(websocket, path):
+    async for message in websocket:
+        print(f"Received: {message}")
+        await websocket.send(f"Echo: {message}")
+
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain('cert.pem', 'key.pem')
+
+start_server = websockets.serve(
+    echo, "0.0.0.0", 8765, ssl=ssl_context
+)
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
+EOF
+
+
+
+########### CLIENT#########################
+##########################################
+
+cat > websocket_client.py << 'EOF'
+import asyncio
+import websockets
+import ssl
+
+async def hello():
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+
+    async with websockets.connect(
+        'wss://localhost:8765', ssl=ssl_context
+    ) as websocket:
+        while True:
+            message = input("Message to send (or 'exit'): ")
+            if message == 'exit':
+                break
+            await websocket.send(message)
+            response = await websocket.recv()
+            print(f"Received: {response}")
+
+asyncio.get_event_loop().run_until_complete(hello())
+EOF
+
+
