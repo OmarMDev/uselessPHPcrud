@@ -2,7 +2,7 @@ import asyncio
 import websockets
 import ssl
 
-async def handle_connection(websocket):
+async def handler(websocket, path):
     print("Client connected")
     try:
         async for message in websocket:
@@ -16,14 +16,14 @@ async def main():
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
     ssl_context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
 
-    server = await websockets.serve(
-        handle_connection,
+    async with websockets.serve(
+        handler,
         "0.0.0.0",
         8765,
         ssl=ssl_context
-    )
-    print(f"WebSocket SSL server running on wss://0.0.0.0:8765")
-    await server.wait_closed()
+    ):
+        print(f"WebSocket server running on wss://0.0.0.0:8765")
+        await asyncio.Future()  # Run forever
 
 if __name__ == "__main__":
     asyncio.run(main())
