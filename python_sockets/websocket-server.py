@@ -1,6 +1,7 @@
 import asyncio
 import websockets
 import ssl
+import pathlib
 
 async def handle_connection(websocket, path):
     print("Client connected")
@@ -12,18 +13,16 @@ async def handle_connection(websocket, path):
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected")
 
-async def main():
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-    ssl_context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
+ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+ssl_context.load_cert_chain(certfile='cert.pem', keyfile='key.pem')
 
-    async with websockets.serve(
-        handle_connection, 
-        "0.0.0.0", 
-        8765, 
-        ssl=ssl_context
-    ):
-        print("WebSocket SSL server started. Waiting for connections...")
-        await asyncio.Future()  # Run forever
+start_server = websockets.serve(
+    handle_connection, 
+    "0.0.0.0", 
+    8765, 
+    ssl=ssl_context
+)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+print("WebSocket SSL server started. Waiting for connections...")
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
