@@ -1,45 +1,41 @@
 import asyncio
 import websockets
 import ssl
-import hashlib
 import hmac
+import hashlib
 
-PRIVATE_KEY = b"my_shared_secret_key"  # Must match client key
-
-def verify_message(encrypted_msg: str) -> tuple:
-    try:
-        message, received_hmac = encrypted_msg.split("|")
-        # Recompute HMAC
-        expected_hmac = hmac.new(PRIVATE_KEY, message.encode(), hashlib.sha256).hexdigest()
-        
-        if hmac.compare_digest(received_hmac, expected_hmac):
-            return True, message
-        return False, "HMAC verification failed"
-    except:
-        return False, "Invalid message format"
+SECRET_KEY = b'my_private_key_123'  # Must be the same on client and server
 
 async def handler(websocket):
     print("Client connected!")
     try:
-        async for encrypted_msg in websocket:
-            print(f"Received encrypted: {encrypted_msg}")
+        while True:
+            message = await websocket.recv()
+            print(f"Raw message: {message}")
             
-            # Verify and decrypt
-            is_valid, message = verify_message(encrypted_msg)
+            # Verify HMAC
+            received_msg, received_digest = message.split('|')
+            computed_digest = hmac.new(SECRET_KEY, received_msg.encode(), hashlib.sha256).hexdigest()
             
-            if is_valid:
-                print(f"Decrypted message: {message}")
-                await websocket.send(f"ACK: {message}")
+            if hmac.compare_digest(received_digest, computed_digest):
+                print(f"Verified message: {received_msg}")
+                response = input("Server response > ")
+                
+                # Create HMAC for response
+                response_digest = hmac.new(SECRET_KEY, response.encode(), hashlib.sha256).hexdigest()
+                await websocket.send(f"{response}|{response_digest}")
             else:
-                print(f"Invalid message: {message}")
-                await websocket.send("ERROR: Invalid message")
+                await websocket.send("INVALID HMAC")
     except websockets.exceptions.ConnectionClosed:
         print("Client disconnected")
 
-ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
-ssl_context.load_cert_chain('cert.pem', 'key.pem')
+async def main():
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain('cert.pem', 'key.pem')
 
-start_server = websockets.serve(handler, "0.0.0.0", 8765, ssl=ssl_context)
+    async with websockets.serve(handler, "0.0.0.0", 8765, ssl=ssl_context):
+        print("Server running at wss://localhost:8765")
+        await asyncio.Future()
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+if __name__ == "__main__":
+    asyncio.run(main())
